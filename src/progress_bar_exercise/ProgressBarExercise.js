@@ -1,11 +1,11 @@
-import React, {useState, useEffect} from "react";
+import React, {useEffect, useState} from "react";
 import Exercise from "../exercise/Exercise";
 
 const ProgressBarExercise = () => {
   return (
     <div className="progress-bar-exercise">
       <Exercise
-        solution={<Solution/>}
+        solution={<Solution breakpoints={[30, 60, 70, 75, 80]}/>}
         specsUrl="https://github.com/SpiffInc/spiff_react_exercises/issues/1"
         title="Progress Bar Exercise"
       />
@@ -16,6 +16,11 @@ const ProgressBarExercise = () => {
 export default ProgressBarExercise;
 
 // ----------------------------------------------------------------------------------
+
+// Constants
+const BREAKPOINT_DELAY = 500;
+
+// Styles
 const barWrapperStyling = {
   height: '6px',
   width: '100%',
@@ -43,6 +48,48 @@ const buttonStyle = {
 const stopButtonStyle = {
   color: 'red',
   borderColor: 'red',
+}
+
+const switchStyle = {
+  position: 'relative',
+  display: 'inline-block',
+  width: '60px',
+  height: '34px',
+}
+
+const checkboxStyle = {
+  opacity: 0,
+  width: 0,
+  height: 0,
+}
+
+const sliderStyle = {
+  position: 'absolute',
+  cursor: 'pointer',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: '#ccc',
+  transition: '.4s',
+  borderRadius: '34px',
+}
+
+const sliderInnerStyle = {
+  position: 'absolute',
+  height: '26px',
+  width: '26px',
+  left: '4px',
+  bottom: '4px',
+  backgroundColor: 'white',
+  transition: '.4s',
+  borderRadius: '50%',
+}
+
+const sliderLabelStyle = {
+  position: 'relative',
+  top: 11,
+  marginLeft: 8,
 }
 
 const CustomButton = ({className, id, onClick, children, style = {}}) => {
@@ -76,28 +123,75 @@ const CustomButton = ({className, id, onClick, children, style = {}}) => {
   </button>
 }
 
-const Solution = () => {
+const CustomToggle = ({onToggleChange, label}) => {
+  // state
+  const [enabled, setEnabled] = useState(false);
+
+  // constants
+  const currentSliderInnerStyle = {...sliderInnerStyle};
+  const currentSliderStyle = {...sliderStyle};
+
+  if (enabled) {
+    currentSliderInnerStyle.transform = 'translateX(26px)';
+    currentSliderStyle.backgroundColor = '#42C9B1';
+  }
+
+  // functions
+  const onClick = () => {
+    onToggleChange(!enabled);
+    setEnabled(!enabled);
+  }
+  return <div>
+    <label style={switchStyle}>
+      <input type="checkbox" style={checkboxStyle}/>
+      <span className={'slider'} style={currentSliderStyle} onClick={onClick}>
+      <span style={currentSliderInnerStyle}/>
+    </span>
+    </label>
+    <span className={"sliderLabel"} style={sliderLabelStyle}>{label}</span>
+  </div>
+}
+
+const Solution = ({breakpoints = []}) => {
   // states
   const [started, setStarted] = useState(false);
   const [progress, setProgress] = useState(0);
   const [finishing, setFinishing] = useState(false);
   const [finishingMilliseconds, setFinishingMilliseconds] = useState(150);
+  const [respectBreakpoints, setRespectBreakpoints] = useState(false);
 
   // variables
+  let delay = !respectBreakpoints ? 150 : ((15000 * .9) - (breakpoints.length * BREAKPOINT_DELAY)) / 90;
+  if (respectBreakpoints && breakpoints.indexOf(progress) !== -1) {
+    delay = BREAKPOINT_DELAY;
+  }
   const fillerStyle = {
     ...barStyling,
-    left: `${progress}%`
+    left: `${progress}%`,
+    transition: `${!finishing ? delay : finishingMilliseconds}ms linear`,
+  }
+  const wrapperStyle = {
+    ...barWrapperStyling,
+    transition: `${progress === 100 ? 1 : 0}s ease-in`,
+    opacity: progress === 100 ? 0 : 1,
   }
 
   // Effects
   useEffect(() => {
     if (finishing) {
-      if (progress === 100) return
+      if (progress === 100) {
+        setTimeout(() => {
+          setFinishing(false);
+          setProgress(0);
+          setStarted(false);
+        }, 2000)
+        return;
+      }
       setTimeout(() => (setProgress(progress + 1)), finishingMilliseconds)
     } else if (progress < 90 && progress > 0) {
-      setTimeout(() => (setProgress(progress + 1)), 150)
+      setTimeout(() => (setProgress(progress + 1)), delay)
     }
-  }, [progress, finishing, finishingMilliseconds])
+  }, [delay, progress, finishing, finishingMilliseconds])
 
   // Functions
   const actionClicked = () => {
@@ -114,7 +208,7 @@ const Solution = () => {
   }
 
   return <div>
-    <div className={'bar_wrapper'} style={barWrapperStyling}>
+    <div className={'bar_wrapper'} style={wrapperStyle}>
       <div className={'Bar'} style={fillerStyle}/>
     </div>
     <div className={'action_bar'}>
@@ -126,6 +220,8 @@ const Solution = () => {
           Finish Request
         </CustomButton>
       }
+      <br/>
+      <CustomToggle onToggleChange={() => {setRespectBreakpoints(!respectBreakpoints)}} label={"Respect Breakpoints"}/>
     </div>
   </div>;
 };
